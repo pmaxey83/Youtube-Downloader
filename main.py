@@ -1,4 +1,5 @@
 import threading
+import tkinter as tk
 from tkinter.filedialog import *
 from tkinter.ttk import Progressbar,Style
 from pytube import YouTube, request
@@ -29,12 +30,15 @@ def download_media(url,filename,audioOnly=False):
         download_audio_button['state'] = 'disabled'
         pause_button['state'] = 'normal'
         cancel_button['state'] = 'normal'
+        var = optMval.get()
         try:
             yt = YouTube(url)
             if(audioOnly):
                 stream = yt.streams.filter(subtype='mp4',only_audio=True).first()
+                filename = filename + '/' + yt.title + '.mp3'
             else:
-                stream = yt.streams.filter(subtype='mp4').first()
+                stream = yt.streams[res_list_db[var]]
+                filename = filename + '/' + yt.title + '.mp4'
             filesize = stream.filesize
             with open(filename, 'wb') as f:
                 is_paused = is_cancelled = False
@@ -63,15 +67,26 @@ def download_media(url,filename,audioOnly=False):
         pause_button['state'] = 'disabled'
         cancel_button['state'] = 'disabled'
 
+def check_quality():
+    yt = YouTube(url_entry.get())
+    counter = 0
+    global res_list_db
+    res_list_db = {}
+    for strm in yt.streams:
+        if strm.mime_type != "audio/webm" and strm.resolution != None:
+            text = str(strm.resolution) + " - " + str(strm.fps) + "fps - " + str(strm.video_codec) 
+            res_list_db[text] = counter
+            menu["menu"].add_command(label=text, command=tk._setit(optMval, text))
+            counter +=1
+    download_button["state"] = "normal"
+    download_audio_button["state"] = "normal"
 
 def start_download():
     filename = askdirectory()
-    filename = filename+'/sample.mp4'
     threading.Thread(target=download_media, args=(url_entry.get(),filename), daemon=True).start()
 
 def start_audio_download():
     filename = askdirectory()
-    filename = filename+'/sample.mp3'
     threading.Thread(target=download_media, args=(url_entry.get(),filename,True), daemon=True).start()
 
 
@@ -97,7 +112,11 @@ def progressBar(percent):
 root = Tk()
 root.title("Youtube Downloader")
 root.iconbitmap("main img/icon.ico")
-root.geometry("500x650")
+root.geometry("500x700")
+
+# OptionsMenu default value
+optMval = StringVar(root)
+optMval.set("-")
 
 #custom style for progress bar
 style = Style()
@@ -140,11 +159,21 @@ url_entry.pack(side=TOP, fill=X, padx=10)
 url_entry.focus()
 
 # Download Button
-download_button = Button(root, text='Download', width=10, command=start_download, font='verdana', relief='ridge', bd=5, bg='#f5f5f5', fg='black')
+download_img = PhotoImage(file="btnimgs/Download.png")
+download_button = Button(root, image=download_img, command=start_download,borderwidth=0,bg=None)
 download_button.pack(side=TOP, pady=10)
 
+# Check Quality Button
+check_quality_button = Button(root, text="Check Quailty", width=12, command=check_quality, font='verdana', relief='ridge', bd=5, bg='#f5f5f5', fg='black')
+check_quality_button.pack(side=TOP, pady=5)
+
+# OptionsMenu
+menu = OptionMenu(root, optMval, "")
+menu.pack()
+
 # Download Audio Button
-download_audio_button = Button(root, text='Download Audio', width=14, command=start_audio_download, font='verdana', relief='ridge', bd=5, bg='#f5f5f5', fg='black')
+download_audio_img = PhotoImage(file="btnimgs/Download_Audio.png")
+download_audio_button = Button(root, image=download_audio_img,command=start_audio_download,borderwidth=0,bg=None)
 download_audio_button.pack(side=TOP, pady=10)
 
 # Progress bar
@@ -152,11 +181,17 @@ progress = Progressbar(root, orient=HORIZONTAL, length = 100, style='text.Horizo
 progress.pack(side=TOP,anchor=CENTER, pady=10)
 
 # Pause Button
-pause_button = Button(root, text='Pause', width=10, command=toggle_download, state='disabled', font='verdana', relief='ridge', bd=5, bg='#f5f5f5', fg='black')
+pause_img = PhotoImage(file="btnimgs/Pause.png")
+pause_button = Button(root, image=pause_img, command=toggle_download, state='disabled',bg=None,borderwidth=0)
 pause_button.pack(side=TOP, pady=10)
 
 # Cancel Button
-cancel_button = Button(root, text='Cancel', width=10, command=cancel_download, state='disabled', font='verdana', relief='ridge', bd=5, bg='#f5f5f5', fg='black')
+cancel_img = PhotoImage(file="btnimgs/Cancel.png")
+cancel_button = Button(root, image=cancel_img, command=cancel_download, state='disabled',bg=None,borderwidth=0)
 cancel_button.pack(side=TOP, pady=10)
+
+# Set button defaults to 
+download_button['state'] = 'disabled'
+download_audio_button['state'] = 'disabled'
 
 root.mainloop()
